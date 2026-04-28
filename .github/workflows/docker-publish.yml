@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up QEMU
-        uses: actions/checkout@v4
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -28,4 +28,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: werikoliveira2/designportifolio:0.1
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/designportifolio:0.2
