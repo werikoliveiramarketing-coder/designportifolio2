@@ -1,0 +1,70 @@
+{
+  "portfolio": [
+    {
+      "id": "1",
+      "title": "Marca Minimalista",
+      "description": "Desenvolvimento de identidade visual para startup de tecnologia.",
+      "images": [
+        "https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80&w=800"
+      ],
+      "category": "Branding"
+    },
+    {
+      "id": "2",
+      "title": "Packaging Design",
+      "description": "Design de embalagens para café orgânico.",
+      "images": [
+        "https://images.unsplash.com/photo-1559056191-4819eb621052?auto=format&fit=crop&q=80&w=800"
+      ],
+      "category": "Packaging"
+    }
+  ],
+  "contact": {
+    "whatsapp": "+5517991707452",
+    "instagram": "https://instagram.com/woliveira.design",
+    "email": "werikoliveiramarketing@gmail.com",
+    "about": "Designer gráfico apaixonado por criar identidades visuais memoráveis e soluções criativas para negócios digitais.",
+    "profileImageUrl": "/uploads/profile_1777192151760.png",
+    "linkedin": "",
+    "twitter": "",
+    "facebook": "",
+    "github": "",
+    "gitlab": ""
+  },
+  "services": [
+    {
+      "id": "1",
+      "title": "Identidade Visual",
+      "description": "Logotipos e manuais de marca únicos.",
+      "iconName": "Palette"
+    },
+    {
+      "id": "2",
+      "title": "Design Digital",
+      "description": "Interfaces para web e redes sociais.",
+      "iconName": "Globe"
+    },
+    {
+      "id": "3",
+      "title": "Motion Design",
+      "description": "Animações que dão vida aos seus projetos.",
+      "iconName": "Zap"
+    },
+    {
+      "id": "4",
+      "title": "Packaging",
+      "description": "Embalagens que saltam aos olhos nas gôndolas.",
+      "iconName": "Sparkles"
+    }
+  ],
+  "admin": {
+    "pin": "1234"
+  },
+  "settings": {
+    "brandColor": "#7b2cff",
+    "brandColorLight": "#f5f0ff",
+    "yearsExperience": 5,
+    "identitiesCreated": 150,
+    "artsCreated": 500
+  }
+}

@@ -1,0 +1,7 @@
+services:
+  web:
+    build: .
+    image: werikoliveira2/designportifolio:latest
+    ports:
+      - "3000:80"
+    restart: always
