@@ -101,7 +101,7 @@ async function getAdminPin() {
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT || 3019;
+  const PORT = parseInt(process.env.PORT || "3000", 10);
 
   app.use(express.json());
   app.use("/uploads", express.static(UPLOADS_DIR));
