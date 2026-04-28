@@ -32,6 +32,7 @@ export default function Home() {
   const scale = useTransform(scrollYProgress, [0, 0.5], [1, 0.8]);
 
   useEffect(() => {
+    console.log("[HOME] Mounting & Fetching Data...");
     const fetchData = async () => {
       try {
         const portfolioRes = await fetch("/api/portfolio");

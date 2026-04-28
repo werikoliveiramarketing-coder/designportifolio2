@@ -14,8 +14,8 @@ const ProjectCard: React.FC<Props> = ({ project, index }) => {
 
   const mainImage = project.images?.[0] || "https://images.unsplash.com/photo-1579389083002-421d6837a40b?auto=format&fit=crop&q=80&w=1200";
 
-  const nextImg = () => setCurrentImgIndex((prev) => (prev + 1) % project.images.length);
-  const prevImg = () => setCurrentImgIndex((prev) => (prev - 1 + project.images.length) % project.images.length);
+  const nextImg = () => setCurrentImgIndex((prev) => (prev + 1) % (project.images?.length || 1));
+  const prevImg = () => setCurrentImgIndex((prev) => (prev - 1 + (project.images?.length || 1)) % (project.images?.length || 1));
 
   React.useEffect(() => {
     if (isGalleryOpen) {
@@ -123,13 +123,13 @@ const ProjectCard: React.FC<Props> = ({ project, index }) => {
                   {/* Image Container */}
                   <div className="relative flex-1 w-full flex items-center justify-center group/modal bg-white/5 rounded-[2rem] overflow-hidden p-2 md:p-6 min-h-[300px]">
                     <img 
-                      src={project.images[currentImgIndex]} 
+                      src={(project.images && project.images[currentImgIndex]) || mainImage} 
                       className="max-w-full h-auto max-h-[70vh] lg:max-h-[85vh] object-contain shadow-2xl transition-transform duration-700"
                       alt={project.title}
                       referrerPolicy="no-referrer"
                     />
                     
-                    {project.images.length > 1 && (
+                    {project.images?.length > 1 && (
                       <>
                         <button 
                           onClick={(e) => { e.stopPropagation(); prevImg(); }}
@@ -150,7 +150,7 @@ const ProjectCard: React.FC<Props> = ({ project, index }) => {
 
                     {/* Image Counter Overlay */}
                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-2 bg-black/60 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-white/50 border border-white/10">
-                      {currentImgIndex + 1} / {project.images.length}
+                      {currentImgIndex + 1} / {project.images?.length || 0}
                     </div>
                   </div>
 

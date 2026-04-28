@@ -28,4 +28,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/designportifolio:0.4
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/designportifolio:0.5
+            ${{ secrets.DOCKERHUB_USERNAME }}/designportifolio:${{ github.sha }}

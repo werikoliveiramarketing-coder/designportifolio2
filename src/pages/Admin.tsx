@@ -94,12 +94,17 @@ export default function Admin() {
     iconName: "Zap",
   });
 
+  const [logs, setLogs] = useState<{ type: string; message: string; timestamp: string; id: number }[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
+
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconSearch, setIconSearch] = useState("");
 
   const filteredIcons = Object.keys(AVAILABLE_ICONS_RAW).filter(name => 
     name.toLowerCase().includes(iconSearch.toLowerCase())
   );
+
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string; type: 'project' | 'service' } | null>(null);
 
   const notify = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
@@ -112,6 +117,28 @@ export default function Admin() {
       handleLogin(savedPin);
     }
   }, []);
+
+  useEffect(() => {
+    if (isLoggedIn && showLogs) {
+      const eventSource = new EventSource("/api/logs/stream");
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const log = JSON.parse(event.data);
+          setLogs((prev) => [{ ...log, id: Math.random() }, ...prev].slice(0, 100));
+        } catch (e) {
+          console.error("Error parsing log:", e);
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        console.error("EventSource failed:", err);
+        eventSource.close();
+      };
+
+      return () => eventSource.close();
+    }
+  }, [isLoggedIn, showLogs]);
 
   const handleLogin = async (inputPin: string) => {
     try {
@@ -127,7 +154,7 @@ export default function Admin() {
         fetchData();
         notify("Login realizado com sucesso!");
       } else {
-        notify("PIN Inválido", "error");
+        notify("Senha Inválida", "error");
       }
     } catch (e) {
       console.error(e);
@@ -210,28 +237,29 @@ export default function Admin() {
 
   const handleCreateProject = async (e: FormEvent) => {
     e.preventDefault();
+    console.log("[FRONTEND] Attempting to create project:", newProject.title);
     try {
       const res = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...newProject, pin }),
       });
+      
+      const data = await res.json();
+      console.log("[FRONTEND] Server response:", data);
+
       if (res.ok) {
         setNewProject({ title: "", description: "", images: [], category: "Identidade visual" });
         fetchData();
         notify("Projeto criado com sucesso!");
       } else {
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const errData = await res.json();
-          notify(`Erro: ${errData.error || "Desconhecido"}`, "error");
-        } else {
-          notify(`Erro no servidor: ${res.status}`, "error");
-        }
+        console.error("[FRONTEND] Create project failed:", data);
+        const errorMsg = data.details || data.error || "Erro desconhecido";
+        notify(`Erro: ${errorMsg}`, "error");
       }
-    } catch (err) {
-      console.error("Error creating project:", err);
-      notify("Erro de conexão ao criar projeto.", "error");
+    } catch (err: any) {
+      console.error("[FRONTEND] Create project request error:", err);
+      notify(`Erro de conexão: ${err.message}`, "error");
     }
   };
 
@@ -270,34 +298,50 @@ export default function Admin() {
   };
 
   const handleDeleteProject = async (id: string, title: string) => {
-    if (!window.confirm(`Tem certeza que deseja excluir o projeto "${title}"?`)) return;
+    setConfirmDelete({ id, title, type: 'project' });
+  };
+
+  const executeDeleteProject = async (id: string, title: string) => {
+    setConfirmDelete(null);
+    notify(`Tentando excluir: ${title}...`);
+    console.log(`[FRONTEND] Deleting project. ID: "${id}", PIN Length: ${String(pin || "").trim().length}`);
     
-    console.log(`Attempting to delete project ${id} with pin ${pin}`);
+    if (!pin || pin.trim() === "") {
+      const msg = "Senha ausente ou inválida. Faça login novamente.";
+      notify(msg, "error");
+      return;
+    }
+
     try {
+      notify(`Iniciando exclusão do projeto ${id}...`);
       const res = await fetch(`/api/portfolio/${id}`, {
         method: "DELETE",
         headers: { 
           "Content-Type": "application/json",
-          "x-admin-pin": pin 
+          "x-admin-pin": pin.trim()
         }
       });
-      if (res.ok) {
-        console.log("Delete successful");
-        fetchData();
-        notify("Projeto excluído com sucesso!");
-      } else {
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const errorData = await res.json();
-          console.error("Delete failed", errorData);
-          notify(`Erro ao excluir: ${errorData.error}`, "error");
+      
+      const data = await res.json();
+      console.log("[FRONTEND] Server response for delete:", data);
+      
+      if (res.ok && data.success) {
+        if (data.count === 0) {
+          const msg = `Aviso: Nada foi excluído. O ID "${id}" pode não existir no banco.`;
+          notify(msg, "error");
+          console.warn("[FRONTEND] Delete count was 0. ID:", id);
         } else {
-          notify(`Erro ao excluir: ${res.status}`, "error");
+          notify("Projeto excluído com sucesso!");
+          fetchData();
         }
+      } else {
+        console.error("[FRONTEND] Delete failed:", data);
+        const errorMsg = data.details || data.error || `Erro ${res.status}`;
+        notify(`Erro ao excluir: ${errorMsg}`, "error");
       }
-    } catch (err) {
-      console.error("Delete request error", err);
-      notify("Erro de conexão ao excluir.", "error");
+    } catch (err: any) {
+      console.error("[FRONTEND] Delete request error:", err);
+      notify(`Erro de conexão: ${err.message}`, "error");
     }
   };
 
@@ -329,31 +373,46 @@ export default function Admin() {
   };
 
   const handleDeleteService = async (id: string, title: string) => {
-    if (!window.confirm(`Excluir o serviço "${title}"?`)) return;
+    setConfirmDelete({ id, title, type: 'service' });
+  };
+
+  const executeDeleteService = async (id: string, title: string) => {
+    setConfirmDelete(null);
+    notify(`Tentando excluir serviço: ${title}...`);
+    console.log(`[FRONTEND] Deleting service. ID: ${id}, PIN Length: ${String(pin || "").trim().length}`);
+
+    if (!pin || pin.trim() === "") {
+      notify("Senha inválida. Faça login.", "error");
+      return;
+    }
 
     try {
       const res = await fetch(`/api/services/${id}`, {
         method: "DELETE",
         headers: { 
           "Content-Type": "application/json",
-          "x-admin-pin": pin
+          "x-admin-pin": pin.trim()
         }
       });
+      
+      const data = await res.json();
+
       if (res.ok) {
-        fetchData();
-        notify("Serviço excluído!");
-      } else {
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const errData = await res.json();
-          notify(`Erro ao excluir: ${errData.error}`, "error");
+        if (data.count === 0) {
+          notify("Aviso: Nada foi coletado. ID incorreto?", "error");
         } else {
-          notify(`Erro ao excluir: ${res.status}`, "error");
+          console.log("[FRONTEND] Service delete successful:", data);
+          fetchData();
+          notify("Serviço excluído!");
         }
+      } else {
+        console.error("[FRONTEND] Service delete failed:", data);
+        const errorMsg = data.details || data.error || `Erro ${res.status}`;
+        notify(`Erro ao excluir: ${errorMsg}`, "error");
       }
-    } catch (err) {
-      console.error(err);
-      notify("Erro de conexão.", "error");
+    } catch (err: any) {
+      console.error("[FRONTEND] Service delete request error:", err);
+      notify(`Erro de conexão: ${err.message}`, "error");
     }
   };
 
@@ -433,15 +492,15 @@ export default function Admin() {
             Admin Login
           </h1>
           <p className="mb-8 text-center text-sm text-white/50">
-            Digite seu PIN para acessar o painel.
+            Digite sua senha de 16 caracteres para acessar o painel.
           </p>
           <div className="space-y-4">
             <input
               type="password"
-              placeholder="Digite o PIN (Padrão: 1234)"
+              placeholder="Digite a Senha"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
-              className="w-full rounded-full border border-white/20 bg-white/10 px-6 py-4 text-center text-xl tracking-[0.5em] focus:border-white focus:outline-none"
+              className="w-full rounded-full border border-white/20 bg-white/10 px-6 py-4 text-center text-sm focus:border-white focus:outline-none"
             />
             <button
               onClick={() => handleLogin(pin)}
@@ -789,26 +848,30 @@ export default function Admin() {
               {projects.map((p) => (
                 <div key={p.id} className="flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm group">
                   <div className="flex -space-x-4 overflow-hidden">
-                    {p.images.slice(0, 3).map((img, i) => (
+                    {(p.images || []).slice(0, 3).map((img, i) => (
                       <img key={i} src={img} alt="" className="h-16 w-16 object-cover rounded-xl border-2 border-white" />
                     ))}
-                    {p.images.length > 3 && (
+                    {(p.images?.length || 0) > 3 && (
                       <div className="h-16 w-16 bg-slate-100 rounded-xl border-2 border-white flex items-center justify-center text-[10px] font-bold">
-                        +{p.images.length - 3}
+                        +{(p.images?.length || 0) - 3}
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold truncate">{p.title}</h4>
-                    <p className="text-[10px] uppercase tracking-widest opacity-40">{p.category}</p>
+                    <div className="flex items-center gap-2">
+                       <span className="text-[10px] uppercase tracking-widest opacity-40">{p.category}</span>
+                       <span className="text-[8px] font-mono bg-slate-100 px-1 rounded opacity-30">ID: {p.id}</span>
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleDeleteProject(p.id, p.title);
+                      e.stopPropagation();
+                      handleDeleteProject(String(p.id), p.title);
                     }}
-                    className="p-4 text-red-500 hover:bg-red-50 rounded-full transition-colors relative z-[50] pointer-events-auto"
+                    className="p-4 text-red-500 hover:bg-red-50 rounded-full transition-all relative z-[50] pointer-events-auto active:scale-95"
                     aria-label="Deletar Projeto"
                   >
                     <Trash2 size={24} />
@@ -951,6 +1014,112 @@ export default function Admin() {
           </section>
         </div>
       </div>
+
+      {/* Real-time Logs Section */}
+      <section className="mt-12">
+        <div className="flex items-center justify-between mb-4 px-2">
+          <h2 className="font-display text-2xl italic flex items-center gap-2">
+            <Terminal size={24} /> Logs de Depuração em Tempo Real
+          </h2>
+          <div className="flex gap-2">
+            <button 
+              onClick={async () => {
+                await fetch("/api/logs/test");
+                notify("Sinal de teste enviado!");
+              }}
+              className="px-4 py-2 rounded-full text-xs font-bold border-2 border-black hover:bg-black hover:text-white transition-all"
+            >
+              Testar Logs
+            </button>
+            <button 
+              onClick={() => setShowLogs(!showLogs)}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                showLogs ? "bg-red-500 text-white" : "bg-black text-white"
+              }`}
+            >
+              {showLogs ? "Parar Stream" : "Ativar Stream de Logs"}
+            </button>
+          </div>
+        </div>
+        
+        {showLogs ? (
+          <div className="bg-black text-green-400 font-mono text-[10px] p-6 rounded-[2rem] h-[400px] overflow-y-auto shadow-2xl border border-white/10 custom-scrollbar">
+            {logs.length === 0 && (
+              <div className="opacity-40 animate-pulse text-center py-20 italic">
+                Aguardando logs do servidor...
+              </div>
+            )}
+            {logs.map((log) => (
+              <div key={log.id} className="mb-2 flex gap-4 hover:bg-white/5 p-1 rounded transition-colors group">
+                <span className="opacity-30 whitespace-nowrap">
+                  [{new Date(log.timestamp).toLocaleTimeString()}]
+                </span>
+                <span className={`font-black uppercase px-2 rounded ${
+                  log.type === 'error' ? 'bg-red-500 text-white' : 
+                  log.type === 'warn' ? 'bg-yellow-500 text-black' : 
+                  log.type === 'system' ? 'bg-blue-500 text-white' :
+                  'bg-white/10 text-white/50'
+                }`}>
+                  {log.type}
+                </span>
+                <span className="break-all opacity-80 group-hover:opacity-100 whitespace-pre-wrap">
+                  {log.message}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-slate-100 p-12 rounded-[2rem] text-center border-2 border-dashed border-black/5">
+            <p className="text-sm opacity-50 font-medium italic">Clique no botão acima para monitorar os logs do servidor em tempo real.</p>
+          </div>
+        )}
+      </section>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-2xl"
+            >
+              <div className="flex justify-center mb-6">
+                <div className="h-16 w-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-500">
+                  <Trash2 size={32} />
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-center mb-2 italic font-display">Confirmar Exclusão</h3>
+              <p className="text-center text-sm text-slate-500 mb-8">
+                Tem certeza que deseja excluir "{confirmDelete.title}"? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  className="flex-1 py-4 font-bold border-2 border-slate-100 rounded-full hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirmDelete.type === 'project') executeDeleteProject(confirmDelete.id, confirmDelete.title);
+                    else executeDeleteService(confirmDelete.id, confirmDelete.title);
+                  }}
+                  className="flex-1 py-4 font-bold bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                >
+                  Excluir
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Notification Toast */}
       <AnimatePresence>
