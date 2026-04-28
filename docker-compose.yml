@@ -3,5 +3,9 @@ services:
     build: .
     image: werikoliveira2/designportifolio:latest
     ports:
-      - "3000:3000"
+      - "3019:3019"
+    environment:
+      - PORT=3019
+      - SUPABASE_URL=YOUR_SUPABASE_URL_HERE
+      - SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE
     restart: always

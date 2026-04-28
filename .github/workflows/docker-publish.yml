@@ -29,4 +29,9 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/designportifolio:0.6
+            ${{ secrets.DOCKERHUB_USERNAME }}/designportifolio:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/designportifolio:stable
+            ${{ secrets.DOCKERHUB_USERNAME }}/designportifolio:${{ github.run_number }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/designportifolio:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

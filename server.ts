@@ -73,10 +73,14 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.warn("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing. Check your .env file.");
+  console.error("CRITICAL ERROR: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing.");
+  console.error("Please set these environment variables in your hosting provider (ZimaOS, Docker, etc.)");
 }
 
-const supabase = createClient(supabaseUrl || "", supabaseKey || "");
+const supabase = createClient(
+  supabaseUrl || "https://placeholder-url.supabase.co", 
+  supabaseKey || "placeholder-key"
+);
 
 // Check connection and tables on startup
 (async () => {
@@ -101,7 +105,7 @@ async function getAdminPin() {
 
 async function startServer() {
   const app = express();
-  const PORT = parseInt(process.env.PORT || "3000", 10);
+  const PORT = parseInt(process.env.PORT || "3019", 10);
 
   app.use(express.json());
   app.use("/uploads", express.static(UPLOADS_DIR));
