@@ -3,5 +3,5 @@ services:
     build: .
     image: werikoliveira2/designportifolio:latest
     ports:
-      - "3000:80"
+      - "3019:3019"
     restart: always

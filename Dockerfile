@@ -13,9 +13,8 @@ RUN npm run build
 FROM nginx:stable-alpine
 
 COPY --from=build /app/dist /usr/share/nginx/html
-# If you have a custom server.ts, this setup would change, 
-# but for a standard SPA (React/Vite), nginx is the best choice.
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+EXPOSE 3019
 
 CMD ["nginx", "-g", "daemon off;"]
